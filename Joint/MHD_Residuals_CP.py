@@ -248,7 +248,7 @@ def residual_energy(vars, boundary=False):
     rho, u, v, p, Bx, By = vars[:, 0], vars[:, 1], vars[:, 2], vars[:, 3], vars[:, 4], vars[:, 5]
     p_gas = p - 0.5*(Bx**2 + By**2)
 
-    res = D_t(rho) + u*D_x(p) + v*D_y(p) + (gamma-2)*(u*Bx+v*By)*(D_x(Bx) + D_y(By)) + (gamma*p_gas+By**2)*D_x(u) + (gamma*p_gas+Bx**2)*D_y(v)- Bx*By*(D_y(u) + D_x(v))
+    res = D_t(p) + u*D_x(p) + v*D_y(p) + (gamma-2)*(u*Bx+v*By)*(D_x(Bx) + D_y(By)) + (gamma*p_gas+By**2)*D_x(u) + (gamma*p_gas+Bx**2)*D_y(v)- Bx*By*(D_y(u) + D_x(v))
        
     if boundary:
         return res
