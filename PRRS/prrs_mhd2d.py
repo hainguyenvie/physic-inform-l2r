@@ -229,6 +229,7 @@ def generate_dataset(n, cfg, ood=False, desc="Simulating"):
         arr = np.stack([sol["w"], sol["A"], sol["u"], sol["v"]], axis=0)  # (4,T,N,N)
         samples.append(arr)
     arr = np.array(samples, dtype=np.float32)    # (n, 4, T, N, N)
+    arr = np.where(np.isfinite(arr), arr, 0.0)  # handle float32 overflow from OOD
     t   = torch.tensor(arr).permute(0, 1, 3, 4, 2)  # (n, 4, N, N, T)
     return t
 
