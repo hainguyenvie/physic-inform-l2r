@@ -68,13 +68,13 @@ cfg = {
     # IC bounds (in-dist): Orszag-Tang vortex amplitude params
     "av_lo": 0.5, "av_hi": 1.5,         # vorticity amplitude scale
     "aB_lo": 0.2, "aB_hi": 0.8,         # magnetic amplitude scale
-    # IC bounds (OOD): higher amplitude
-    "av_lo_ood": 1.5, "av_hi_ood": 2.5,
-    "aB_lo_ood": 0.8, "aB_hi_ood": 1.5,
+    # IC bounds (OOD): higher amplitude — kept moderate to avoid float64 blow-up
+    "av_lo_ood": 1.5, "av_hi_ood": 2.0,
+    "aB_lo_ood": 0.8, "aB_hi_ood": 1.2,
     # Dataset
     "n_train": 500, "n_cal": 200, "n_val": 100,
     # FNO
-    "T_in": 1, "T_out": 20, "step": 1,
+    "T_in": 1, "T_out": 20, "step": 4,
     "modes": 12, "width": 20, "num_vars": 4,
     # Training
     "epochs": 500, "batch_size": 50,
@@ -171,34 +171,35 @@ def solve_mhd_2d(av, aB, cfg, seed=None):
     u0, v0, w_init, A_init = get_uvjw(oh, Ah)
     w_s, A_s, u_s, v_s = [w_init], [A_init], [u0], [v0]
 
-    for n in range(Nt_):
-        # Clip before Jacobian to prevent OOD overflow propagation
-        oh = np.where(np.isfinite(oh), oh, 0.0)
-        Ah = np.where(np.isfinite(Ah), Ah, 0.0)
-        # Stream function and current density
-        psi_h = oh / K2;  psi_h[0, 0] = 0.0
-        jh    = K2 * Ah   # j = -∇²A → ĵ = K²·Â (K²[0,0]=1, no div-by-zero issue)
+    with np.errstate(over='ignore', invalid='ignore'):
+        for n in range(Nt_):
+            # Clip before Jacobian to prevent OOD overflow propagation
+            oh = np.where(np.isfinite(oh), oh, 0.0)
+            Ah = np.where(np.isfinite(Ah), Ah, 0.0)
+            # Stream function and current density
+            psi_h = oh / K2;  psi_h[0, 0] = 0.0
+            jh    = K2 * Ah   # j = -∇²A → ĵ = K²·Â (K²[0,0]=1, no div-by-zero issue)
 
-        # Vorticity Jacobian: J(ψ,ω) - J(A,j)
-        J_vel = jacobian(psi_h, oh)      # (u·∇)ω term (with sign convention)
-        J_mag = jacobian(Ah, jh)         # Lorentz force term
-        Jw    = J_vel - J_mag            # net forcing in ω equation
+            # Vorticity Jacobian: J(ψ,ω) - J(A,j)
+            J_vel = jacobian(psi_h, oh)      # (u·∇)ω term (with sign convention)
+            J_mag = jacobian(Ah, jh)         # Lorentz force term
+            Jw    = J_vel - J_mag            # net forcing in ω equation
 
-        # Induction Jacobian: J(ψ,A)
-        J_ind = jacobian(psi_h, Ah)
+            # Induction Jacobian: J(ψ,A)
+            J_ind = jacobian(psi_h, Ah)
 
-        # CN update
-        oh = (numer_w * oh + dt * Jw)  / denom_w
-        Ah = (numer_A * Ah + dt * J_ind) / denom_A
-        oh = oh * deal
-        Ah = Ah * deal
-        # Clip to prevent NaN propagation
-        oh = np.where(np.isfinite(oh), oh, 0.0)
-        Ah = np.where(np.isfinite(Ah), Ah, 0.0)
+            # CN update
+            oh = (numer_w * oh + dt * Jw)  / denom_w
+            Ah = (numer_A * Ah + dt * J_ind) / denom_A
+            oh = oh * deal
+            Ah = Ah * deal
+            # Clip to prevent NaN propagation
+            oh = np.where(np.isfinite(oh), oh, 0.0)
+            Ah = np.where(np.isfinite(Ah), Ah, 0.0)
 
-        if (n + 1) % tsl == 0:
-            u_, v_, w_, A_ = get_uvjw(oh, Ah)
-            w_s.append(w_); A_s.append(A_); u_s.append(u_); v_s.append(v_)
+            if (n + 1) % tsl == 0:
+                u_, v_, w_, A_ = get_uvjw(oh, Ah)
+                w_s.append(w_); A_s.append(A_); u_s.append(u_); v_s.append(v_)
 
     return {"w": np.array(w_s), "A": np.array(A_s),
             "u": np.array(u_s), "v": np.array(v_s)}
@@ -226,7 +227,8 @@ def generate_dataset(n, cfg, ood=False, desc="Simulating"):
         sol = solve_mhd_2d(avs[i], aBs[i], cfg, seed=SEED + i + (5000 if ood else 0))
         arr = np.stack([sol["w"], sol["A"], sol["u"], sol["v"]], axis=0)  # (4,T,N,N)
         samples.append(arr)
-    arr = np.array(samples, dtype=np.float32)    # (n, 4, T, N, N)
+    with np.errstate(over='ignore', invalid='ignore'):
+        arr = np.array(samples, dtype=np.float32)    # (n, 4, T, N, N)
     arr = np.where(np.isfinite(arr), arr, 0.0)  # handle float32 overflow from OOD
     t   = torch.tensor(arr).permute(0, 1, 3, 4, 2)  # (n, 4, N, N, T)
     return t
