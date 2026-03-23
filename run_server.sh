@@ -42,6 +42,7 @@ if [[ "$1" != "--ns-only" ]]; then
     python3 "$REPO_ROOT/PRRS/prrs_mhd2d.py" \
       --seeds 0 1 2 \
       --n-equations 5 \
+      --normalize-pre \
       --output-dir "$RESULTS" \
       2>&1 | tee "$LOGS/mhd2d_3seeds.log"
 fi

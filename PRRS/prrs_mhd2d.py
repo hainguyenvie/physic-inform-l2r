@@ -378,7 +378,7 @@ def predict_ar(model, a_enc, out_norm, cfg):
     T_in = cfg["T_in"]
     with torch.no_grad():
         for _ in range(0, T_out, step):
-            out = model(inp).cpu()
+            out = torch.nan_to_num(model(inp), nan=0.0, posinf=1e3, neginf=-1e3).cpu()
             preds.append(out)
             inp = torch.cat([inp[..., step:], out.to(device)], dim=-1)[..., -T_in:]
     return out_norm.decode(torch.cat(preds, dim=-1))
