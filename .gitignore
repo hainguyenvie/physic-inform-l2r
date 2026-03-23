@@ -28,11 +28,26 @@ Plots/
 #Log files
 *.log
 
-#Submission Script
-*.sh
+#Submission Script — keep run scripts
+#*.sh
 
 #Data
 *.npy
 *.npz
 *.csv
 *.json
+
+#Results/outputs
+PRRS/results/
+PRRS/results_all/
+results_all/
+results/
+logs/
+
+#Cache
+__pycache__/
+*.pyc
+*.pyo
+
+#Misc
+*.docx
