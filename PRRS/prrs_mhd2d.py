@@ -359,10 +359,11 @@ def train_one_epoch(model, loader, optimizer, cfg):
         optimizer.zero_grad()
         loss = torch.tensor(0.0, device=device)
         inp  = a_b
+        T_in = cfg["T_in"]
         for t in range(0, T_out, step):
             out  = model(inp)
             loss = loss + lp_loss(out, u_b[..., t:t+step])
-            inp  = torch.cat([inp[..., step:], out.detach()], dim=-1)
+            inp  = torch.cat([inp[..., step:], out.detach()], dim=-1)[..., -T_in:]
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -373,11 +374,12 @@ def predict_ar(model, a_enc, out_norm, cfg):
     model.eval()
     T_out, step = cfg["T_out"], cfg["step"]
     inp = a_enc.to(device); preds = []
+    T_in = cfg["T_in"]
     with torch.no_grad():
         for _ in range(0, T_out, step):
             out = model(inp).cpu()
             preds.append(out)
-            inp = torch.cat([inp[..., step:], out.to(device)], dim=-1)
+            inp = torch.cat([inp[..., step:], out.to(device)], dim=-1)[..., -T_in:]
     return out_norm.decode(torch.cat(preds, dim=-1))
 
 def relative_l2(pred, true):
