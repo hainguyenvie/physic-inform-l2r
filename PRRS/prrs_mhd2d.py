@@ -77,7 +77,7 @@ cfg = {
     "T_in": 1, "T_out": 20, "step": 4,
     "modes": 16, "width": 32, "num_vars": 4,
     # Training
-    "epochs": 500, "batch_size": 200,
+    "epochs": 500, "batch_size": 100,
     "lr": 1e-3, "sched_step": 100, "sched_gamma": 0.5,
     # CP / PRRS
     "alpha": 0.10, "coverage_target": 0.90, "n_tau_grid": 500,
