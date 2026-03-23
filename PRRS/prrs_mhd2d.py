@@ -72,7 +72,7 @@ cfg = {
     # Dataset
     "n_train": 500, "n_cal": 200, "n_val": 100,
     # FNO
-    "T_in": 1, "T_out": 20, "step": 1,
+    "T_in": 1, "T_out": 20, "step": 4,
     "modes": 8, "width": 16, "num_vars": 4,
     # Training
     "epochs": 500, "batch_size": 50,
@@ -164,7 +164,8 @@ def solve_mhd_2d(av, aB, cfg, seed=None):
         fy = np.real(np.fft.ifft2(1j * KY * fh_d))
         gx = np.real(np.fft.ifft2(1j * KX * gh_d))
         gy = np.real(np.fft.ifft2(1j * KY * gh_d))
-        return np.fft.fft2(fx * gy - fy * gx) * deal
+        result = np.fft.fft2(fx * gy - fy * gx) * deal
+        return np.where(np.isfinite(result), result, 0.0)
 
     oh = np.fft.fft2(w0) * deal
     Ah = np.fft.fft2(A0) * deal
@@ -173,6 +174,9 @@ def solve_mhd_2d(av, aB, cfg, seed=None):
     w_s, A_s, u_s, v_s = [w_init], [A_init], [u0], [v0]
 
     for n in range(Nt_):
+        # Clip before Jacobian to prevent OOD overflow propagation
+        oh = np.where(np.isfinite(oh), oh, 0.0)
+        Ah = np.where(np.isfinite(Ah), Ah, 0.0)
         # Stream function and current density
         psi_h = oh / K2;  psi_h[0, 0] = 0.0
         jh    = K2 * Ah   # j = -∇²A → ĵ = K²·Â (K²[0,0]=1, no div-by-zero issue)

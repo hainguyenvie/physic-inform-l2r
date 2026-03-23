@@ -154,7 +154,7 @@ class ConvOperator():
         """
         Performs spectral convolution using the convolution theorem 
 
-        f * g = \hat{f} . \hat{g}
+        f * g = hat{f} . hat{g}
 
         Args:
             f (torch.Tensor): The input field tensor.
@@ -162,7 +162,7 @@ class ConvOperator():
 
         Returns:
             torch.Tensor: The result of the 3D derivative convolution.
-        """ 
+        """
         if kernel is not None:
             self.kernel = kernel
 
@@ -181,13 +181,13 @@ class ConvOperator():
         """
         Performs Convolution using the convolution theorem. Manual Implementation. 
         
-        f * g = \hat{f} . \hat{g}
-        
+        f * g = hat{f} . hat{g}
+
         Args:
             field (torch.Tensor): The input field tensor.
             kernel (torch.Tensor): The convolution kernel tensor.
         Returns:
-            torch.Tensor: The result of the 3D differentation operation. 
+            torch.Tensor: The result of the 3D differentation operation.
         """
         if kernel is not None:
             self.kernel = kernel
