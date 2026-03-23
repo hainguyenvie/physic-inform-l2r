@@ -4,6 +4,8 @@
 PRRS — 2D Incompressible Resistive Magnetohydrodynamics (MHD)
 =============================================================
 Pseudo-spectral vorticity–magnetic-potential solver with 2/3 dealiasing.
+IC: Parameterized Orszag-Tang vortex (standard MHD benchmark, paper Sec. 5.3).
+    ω = av*k1*(cos(k1*x)+cos(k1*y)),  A = aB*(cos(k1*y)/k1 + cos(k2*x)/k2)
 
 PDE (incompressible 2D resistive MHD):
   ∂ω/∂t = J(ψ,ω) - J(A,j) + ν∇²ω        [vorticity + Lorentz]
@@ -63,17 +65,17 @@ cfg = {
     "N":   64,   "L":   1.0,
     "tEnd": 0.5, "dt":  0.005,          # Nt = 100 steps
     "t_slice": 5,                        # dt_sub = 0.025, Nt_sub = 20 frames
-    # IC bounds (in-dist): amplitude params
-    "av_lo": 0.5, "av_hi": 1.0,         # vorticity amplitude
-    "aB_lo": 0.1, "aB_hi": 0.3,         # magnetic amplitude
-    # IC bounds (OOD): higher amplitude — capped to avoid spectral blow-up
-    "av_lo_ood": 1.2, "av_hi_ood": 1.8,
-    "aB_lo_ood": 0.3, "aB_hi_ood": 0.5,
+    # IC bounds (in-dist): Orszag-Tang vortex amplitude params
+    "av_lo": 0.5, "av_hi": 1.5,         # vorticity amplitude scale
+    "aB_lo": 0.2, "aB_hi": 0.8,         # magnetic amplitude scale
+    # IC bounds (OOD): higher amplitude
+    "av_lo_ood": 1.5, "av_hi_ood": 2.5,
+    "aB_lo_ood": 0.8, "aB_hi_ood": 1.5,
     # Dataset
     "n_train": 500, "n_cal": 200, "n_val": 100,
     # FNO
-    "T_in": 1, "T_out": 20, "step": 4,
-    "modes": 8, "width": 16, "num_vars": 4,
+    "T_in": 1, "T_out": 20, "step": 1,
+    "modes": 12, "width": 20, "num_vars": 4,
     # Training
     "epochs": 500, "batch_size": 50,
     "lr": 1e-3, "sched_step": 100, "sched_gamma": 0.5,
@@ -114,7 +116,10 @@ def solve_mhd_2d(av, aB, cfg, seed=None):
     """
     Pseudo-spectral 2D resistive MHD solver.
     Returns dict {w, A, u, v} each (Nt_sub+1, N, N).
-    IC: random Fourier mode superposition scaled by av (vorticity) and aB (B field).
+    IC: Parameterized Orszag-Tang vortex (OT benchmark, paper Section 5.3).
+      ω  = av * k1 * (cos(k1*x) + cos(k1*y))
+      A  = aB * (cos(k1*y)/k1 + cos(k2*x)/k2)
+    where k1 = 2π/L, k2 = 4π/L.  Only amplitude (av, aB) varies across samples.
     """
     N   = cfg["N"]; L = cfg["L"]
     nu  = cfg["nu"]; eta = cfg["eta"]
@@ -122,25 +127,18 @@ def solve_mhd_2d(av, aB, cfg, seed=None):
     Nt_ = int(cfg["tEnd"] / dt)
     KX, KY, K2 = _wavenumbers(N, L)
     deal = _dealias(N)
-    rng  = np.random.default_rng(seed)
 
     x = np.linspace(0, L, N, endpoint=False)
     X, Y = np.meshgrid(x, x, indexing='ij')
 
-    # Random IC: superposition of 6 low-wavenumber Fourier modes
-    def rand_field(amp, n_modes=6):
-        f = np.zeros((N, N))
-        for _ in range(n_modes):
-            kx = rng.integers(1, 4)
-            ky = rng.integers(-3, 4)
-            ph = rng.uniform(0, 2*np.pi)
-            c  = rng.uniform(0.5, 1.0) * rng.choice([-1, 1])
-            f += c * np.cos(2*np.pi*(kx*X + ky*Y)/L + ph)
-        mx = np.abs(f).max() + 1e-8
-        return amp * f / mx
-
-    w0 = rand_field(av)
-    A0 = rand_field(aB)
+    # Parameterized Orszag-Tang vortex IC
+    k1 = 2.0 * np.pi / L   # fundamental wavenumber
+    k2 = 2.0 * k1           # second harmonic (for By = sin(k2*x))
+    # Vorticity from OT velocity field: ω = k1*av*(cos(k1*x) + cos(k1*y))
+    w0 = av * k1 * (np.cos(k1 * X) + np.cos(k1 * Y))
+    # Magnetic potential: A = aB*(cos(k1*y)/k1 + cos(k2*x)/k2)
+    # gives Bx = ∂A/∂y = -aB*sin(k1*y), By = -∂A/∂x = aB*sin(k2*x)/2
+    A0 = aB * (np.cos(k1 * Y) / k1 + np.cos(k2 * X) / k2)
 
     # Crank-Nicolson denominators
     denom_w = 1.0 + 0.5 * nu  * K2 * dt
