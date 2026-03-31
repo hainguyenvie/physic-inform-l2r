@@ -433,7 +433,7 @@ def risk_coverage_curve(scores, errors, n_thresholds=500):
 
 def auc_rc(covs, risks):
     idx = np.argsort(covs)
-    return float(np.trapz(risks[idx], covs[idx]))
+    return float(np.trapezoid(risks[idx], covs[idx]))
 
 
 # ═════════════════════════════════════════════════════════════════════════════

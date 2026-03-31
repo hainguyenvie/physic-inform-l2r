@@ -447,7 +447,7 @@ def auc_rc(coverages, risks):
     """Area Under Risk-Coverage curve (lower = better rejector)."""
     # sort by coverage ascending
     idx = np.argsort(coverages)
-    return float(np.trapz(risks[idx], coverages[idx]))
+    return float(np.trapezoid(risks[idx], coverages[idx]))
 
 
 # ═════════════════════════════════════════════════════════════════════════════

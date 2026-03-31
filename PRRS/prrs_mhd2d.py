@@ -384,9 +384,10 @@ def predict_ar(model, a_enc, out_norm, cfg):
     return out_norm.decode(torch.cat(preds, dim=-1))
 
 def relative_l2(pred, true):
-    diff = (pred - true).reshape(pred.shape[0], -1)
-    norm = true.reshape(true.shape[0], -1)
-    return (diff.norm(2, dim=1) / (norm.norm(2, dim=1) + 1e-8)).numpy()
+    # Convert to float64 to avoid overflow with huge OOD inputs
+    diff = (pred - true).reshape(pred.shape[0], -1).double()
+    norm_vals = true.reshape(true.shape[0], -1).double()
+    return (diff.norm(2, dim=1) / (norm_vals.norm(2, dim=1) + 1e-8)).float().numpy()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -453,6 +454,8 @@ def pre_score_mhd(pred, normalize=False, trim=True, n_eq=5):
         energy = (w_t.pow(2) + A_t.pow(2)).mean(dim=(1, 2, 3)).sqrt()
         score = score / (energy + 1e-8)
 
+    # Filter out NaNs if any residual explodes
+    score = torch.nan_to_num(score, nan=1e6)
     return score.detach().numpy()
 
 
@@ -492,7 +495,7 @@ def risk_coverage_curve(scores, errors, n_thresholds=500):
 
 def auc_rc(covs, risks):
     idx = np.argsort(covs)
-    return float(np.trapz(risks[idx], covs[idx]))
+    return float(np.trapezoid(risks[idx], covs[idx]))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
