@@ -20,7 +20,7 @@ echo "========================================================"
 # ── 1. Install deps ───────────────────────────────────────────────────────────
 echo ""
 echo "==> Installing Python packages..."
-pip install --quiet --break-system-packages torch --index-url https://download.pytorch.org/whl/cu121
+pip install --quiet --break-system-packages torch --upgrade
 pip install --quiet --break-system-packages numpy scipy matplotlib tqdm
 
 # ── 2. Run experiments ────────────────────────────────────────────────────────
