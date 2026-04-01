@@ -84,7 +84,7 @@ cfg = {
     "T_in": 1, "T_out": 20, "step": 1,
     "modes": 16, "width": 32, "num_vars": 1,
     # Training (Appendix J.2)
-    "epochs": 500, "batch_size": 50,
+    "epochs": 500, "batch_size": 200,   # Tăng batch_size lên 200 (vì VRAM lớn)
     "lr": 5e-3, "sched_step": 100, "sched_gamma": 0.5,
     # CP / PRRS
     "alpha": 0.10,           # → 90% target coverage
