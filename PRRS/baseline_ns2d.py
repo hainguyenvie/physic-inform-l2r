@@ -70,7 +70,7 @@ cfg = {
     "T_in": 1, "T_out": 20, "step": 1,
     "modes": 8, "width": 16, "num_vars": 4,
     # Training (paper: batch=5, epochs=500)
-    "epochs": 500, "batch_size": 100,   # Tăng batch_size lên 100
+    "epochs": 500, "batch_size": 50,
     "lr": 5e-3, "sched_step": 100, "sched_gamma": 0.5,
     # CP / PRRS
     "alpha": 0.10, "coverage_target": 0.90,
