@@ -747,6 +747,11 @@ if __name__ == "__main__":
     parser.add_argument('--seed',        type=int,   default=0)
     parser.add_argument('--seeds',       type=int,   nargs='+', default=None,
                         help='Run multiple seeds (overrides --seed)')
+    parser.add_argument('--method',      type=str,   default='mc_dropout',
+                        choices=['mc_dropout', 'ensemble', 'prrs'],
+                        help='Uncertainty method: mc_dropout | ensemble | prrs')
+    parser.add_argument('--dropout',     type=float, default=0.1,
+                        help='Dropout rate for MC Dropout (default: 0.1)')
     parser.add_argument('--norm-pre',    action='store_true',
                         help='Normalize PRE score by flow energy (fix amplitude bias)')
     parser.add_argument('--normalize-pre', action='store_true',
@@ -758,6 +763,10 @@ if __name__ == "__main__":
     parser.add_argument('--output-dir',  type=str,   default=None,
                         help='Directory to save results (default: PRRS/results/)')
     args = parser.parse_args()
+
+    # Set globals used inside main()
+    method    = args.method
+    dropout_p = args.dropout
 
     # Override cfg from CLI
     if args.n_train is not None:
@@ -771,7 +780,7 @@ if __name__ == "__main__":
         os.makedirs(RESULTS, exist_ok=True)
 
     do_norm = args.norm_pre or args.normalize_pre
-    norm_tag = "_norm" if do_norm else "_raw"
+    norm_tag = f"_{method}" + ("_norm" if do_norm else "_raw")
     seeds = args.seeds if args.seeds is not None else [args.seed]
 
     all_results = []
@@ -780,7 +789,7 @@ if __name__ == "__main__":
         torch.manual_seed(SEED)
         np.random.seed(SEED)
 
-        suffix  = f"_seed{SEED}{norm_tag}"
+        suffix  = f"_{method}_seed{SEED}" + ("_norm" if do_norm else "")
         results = main(norm_pre=do_norm, suffix=suffix)
         results["seed"] = SEED
 
